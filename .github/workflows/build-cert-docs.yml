@@ -11,14 +11,14 @@ on:
         required: true
         type: string
       generate-guides:
-        description: 'Whether to generate coverage guides or not'
+        description: 'Whether to generate coverage guides or not. Optional. Default is false.'
         required: false
         default: false
         type: boolean
 
 jobs:
   generate-guides:
-    if: ${{ inputs.generate-guides == true }}
+    if:  ${{ github.event.inputs.generate-guides == true }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -60,9 +60,9 @@ jobs:
           retention-days: 5
 
   build-docs:
-    needs: ${{ inputs.generate-guides == true && 'generate-guides' }}
+    needs: ${{ github.event.inputs.generate-guides == true && 'generate-guides' }}
     runs-on: ubuntu-latest
-
+  
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: true  
