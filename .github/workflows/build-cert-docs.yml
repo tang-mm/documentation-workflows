@@ -13,8 +13,8 @@ on:
       generate-guides:
         description: 'Whether to generate coverage guides or not. Optional. Default is false.'
         required: false
-        default: false
-        type: boolean
+        default: 'false'
+        type: string
 
 jobs:
   test:
