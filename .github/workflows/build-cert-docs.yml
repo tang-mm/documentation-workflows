@@ -37,12 +37,20 @@ jobs:
           sudo add-apt-repository ppa:checkbox-dev/beta
           sudo apt-get update
       
+      - name: Install apt prerequisites
+        run: |
+          sudo apt-get install --no-install-recommends --assume-yes \
+            canonical-certification-client \
+            canonical-certification-server
+
       - name: Generate coverage guides
         run: |
           cd ${{ inputs.working-directory }}/scripts/
+          alias checkbox-cli="checkbox.checkbox-cli"
           bash ./run_generate_test_guide.sh
         id: generate-guides
 
+      # save the generated guides for use in next job
       - name: Save generated guides
         id: save-guides
         uses: actions/upload-artifact@v4
