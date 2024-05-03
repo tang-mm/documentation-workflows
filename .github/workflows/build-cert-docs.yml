@@ -18,7 +18,7 @@ on:
 
 jobs:
   generate-guides:
-    if: inputs.generate-guides != false
+    if: ${{ inputs.generate-guides == true }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -60,7 +60,7 @@ jobs:
           retention-days: 5
 
   build-docs:
-    needs: generate-guides
+    needs: ${{ inputs.generate-guides == true && 'generate-guides' }}
     runs-on: ubuntu-latest
 
     concurrency:
