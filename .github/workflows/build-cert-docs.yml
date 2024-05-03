@@ -18,7 +18,7 @@ on:
 
 jobs:
   generate-guides:
-    if: inputs.generate-guides == 'true'
+    if: inputs.generate-guides != false
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -100,7 +100,7 @@ jobs:
 
       # restore the generated guides from previous job, if they exist
       - name: Restore generated guides
-        if: inputs.generate-guides == 'true'
+        if: inputs.generate-guides != false
         uses: actions/download-artifact@v4
         with:
           name: generated-coverage-guides
