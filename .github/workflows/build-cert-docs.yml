@@ -89,8 +89,6 @@ jobs:
             python3-venv \
             python3-sphinx \
             build-essential \
-            canonical-certification-client \
-            canonical-certification-server \
             fonts-ubuntu
 
       - name: Initialise submodules
