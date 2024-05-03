@@ -11,24 +11,17 @@ on:
         required: true
         type: string
       generate-guides:
-        description: 'Whether to generate coverage guides or not. Optional. Default is false.'
+        description: 'Whether to generate coverage guides or not. Optional. Default is true.'
         required: false
-        default: 'false'
+        default: 'true'
+        type: string
+      generate-pdf:
+        description: 'Whether to build PDF files or not. Optional. Default is true.'
+        required: false
+        default: 'true'
         type: string
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name : test
-        run: |
-          echo "test"
-          echo ${{ github.event.inputs.generate-guides }} 
-          echo ${{ inputs.generate-guides }} 
-          echo ${{ inputs.generate-guides == true }}
-          echo ${{ inputs.generate-guides == 'true' }}
-          echo ${{ inputs.generate-guides == false }}
-          echo ${{ inputs.generate-guides == 'false' }}
   generate-guides:
     if:  ${{ inputs.generate-guides == 'true' }}
     runs-on: ubuntu-latest
@@ -116,7 +109,7 @@ jobs:
 
       # restore the generated guides from previous job, if they exist
       - name: Restore generated guides
-        if: inputs.generate-guides != false
+        if:  ${{ inputs.generate-guides == 'true' }}
         uses: actions/download-artifact@v4
         with:
           name: generated-coverage-guides
@@ -124,14 +117,16 @@ jobs:
         continue-on-error: true
 
       - name: Build PDF formatted documentation
+        if:  ${{ inputs.generate-pdf == 'true' }}
         run: |
           make clean-doc
           make pdf
 
       - name: Upload PDF formatted artifacts
+        if:  ${{ inputs.generate-pdf == 'true' }}
         uses: actions/upload-artifact@v4
         with:
-          name: PDFs
+          name: PDF
           path:  ${{ env.BUILDDIR_PDF }}
           retention-days: 5
 
