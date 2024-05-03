@@ -14,7 +14,6 @@ on:
         description: 'Whether to generate coverage guides or not. Optional. Default is false.'
         required: false
         default: 'false'
-        type: string
 
 jobs:
   test:
@@ -29,7 +28,7 @@ jobs:
           echo ${{ github.event.inputs.generate-guides == false }}
           echo ${{ github.event.inputs.generate-guides == 'false' }}
   generate-guides:
-    if:  ${{ github.event.inputs.generate-guides == true }}
+    if:  ${{ github.event.inputs.generate-guides == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
