@@ -60,7 +60,8 @@ jobs:
           retention-days: 5
 
   build-docs:
-    needs: ${{ github.event.inputs.generate-guides == true && 'generate-guides' }}
+    needs: generate-guides
+    if: ${{ needs.generate-guides.result == 'skipped' || needs.generate-guides.result == 'success' }}
     runs-on: ubuntu-latest
   
     concurrency:
