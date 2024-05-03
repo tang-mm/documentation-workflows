@@ -17,7 +17,44 @@ on:
         type: boolean
 
 jobs:
-  build:
+  generate-guides:
+    if: inputs.generate-guides == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          path: ${{ inputs.working-directory }}
+
+      - name: Check if run_generate_test_guide.sh exists
+        id: check-script-exists
+        run: |
+          test -f ${{ inputs.working-directory }}/scripts/run_generate_test_guide.sh \
+          || { echo "run_generate_test_guide.sh not found, skipping"; exit 0; }
+
+      - name: Add checkbox-dev/beta ppa
+        run: |
+          sudo add-apt-repository ppa:checkbox-dev/beta
+          sudo apt-get update
+      
+      - name: Generate coverage guides
+        run: |
+          cd ${{ inputs.working-directory }}/scripts/
+          alias checkbox-cli="checkbox.checkbox-cli"
+          bash ./run_generate_test_guide.sh
+        id: generate-guides
+
+      # save the generated guides for use in next job
+      - name: Save generated guides
+        id: save-guides
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-coverage-guides
+          path: ${{ inputs.working-directory }}/generated
+          retention-days: 5
+
+  build-docs:
+    needs: generate-guides
     runs-on: ubuntu-latest
 
     concurrency:
@@ -27,7 +64,7 @@ jobs:
     env:
       BUILDDIR_HTML: ${{ inputs.working-directory }}/_build/html
       BUILDDIR_PDF: ${{ inputs.working-directory }}/_build/pdf
-
+    
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -38,11 +75,6 @@ jobs:
         run: |
           test -f ${{ inputs.working-directory }}/Makefile \
           || { echo "Makefile not found, exiting."; exit 1; }
-
-      - name: Add checkbox-dev/beta ppa
-        run: |
-          sudo add-apt-repository ppa:checkbox-dev/beta
-          sudo apt-get update
 
       - name: Install apt prerequisites
         run: |
@@ -55,30 +87,25 @@ jobs:
             canonical-certification-server \
             fonts-ubuntu
 
-      # depend on checkbox-cli to generate test guides
-      - name: Check if run_generate_test_guide.sh exists
-        id: check-script-exists
+      # init submodules
+      - name: Initialize submodules
         run: |
-          if test -f  ${{ inputs.working-directory }}/scripts/run_generate_test_guide.sh; then
-            echo "::set-output name=exists::true"
-            echo "Found run_generate_test_guide.sh"
-          else
-            echo "::set-output name=exists::false"
-            echo "run_generate_test_guide.sh not found, skipping"
-          fi
-      
-      - name: Generate coverage guides
-        if: success() && steps.check-script-exists.outputs.exists == 'true'
-        run: |
-          cd ${{ inputs.working-directory }}/scripts/
-          alias checkbox-cli="checkbox.checkbox-cli"
-          bash ./run_generate_test_guide.sh
-        id: generate-guides
+          cd ${{ inputs.working-directory }}
+          git submodule update --init .sphinx/_extension/canonical-sphinx-extensions
 
       - name: Set up and activate Sphinx virtualenv
         run: |
           cd ${{ inputs.working-directory }}
           make install
+
+      # restore the generated guides from previous job, if they exist
+      - name: Restore generated guides
+        if: inputs.generate-guides == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: generated-coverage-guides
+          path: ${{ inputs.working-directory }}/generated
+        continue-on-error: true
 
       - name: Build PDF formatted documentation
         run: |
@@ -86,7 +113,6 @@ jobs:
           make pdf
 
       - name: Upload PDF formatted artifacts
-        if: success() && steps.check-script-exists.outputs.exists == 'true' && steps.generate-guides.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: PDFs
@@ -94,15 +120,12 @@ jobs:
           retention-days: 5
 
       - name: Build HTML formatted documentation
-        if: success() && steps.check-script-exists.outputs.exists == 'true' && steps.generate-guides.outcome == 'success'
         run: |
           make html
 
       - name: Upload HTML formatted artifacts
-        if: success() && steps.check-script-exists.outputs.exists == 'true' && steps.generate-guides.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: HTML
           path: ${{ env.BUILDDIR_HTML }}
           retention-days: 5
-
