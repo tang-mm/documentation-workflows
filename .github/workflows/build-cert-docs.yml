@@ -40,11 +40,9 @@ jobs:
       - name: Generate coverage guides
         run: |
           cd ${{ inputs.working-directory }}/scripts/
-          alias checkbox-cli="checkbox.checkbox-cli"
           bash ./run_generate_test_guide.sh
         id: generate-guides
 
-      # save the generated guides for use in next job
       - name: Save generated guides
         id: save-guides
         uses: actions/upload-artifact@v4
@@ -87,8 +85,7 @@ jobs:
             canonical-certification-server \
             fonts-ubuntu
 
-      # init submodules
-      - name: Initialize submodules
+      - name: Initialise submodules
         run: |
           cd ${{ inputs.working-directory }}
           git submodule update --init .sphinx/_extension/canonical-sphinx-extensions
