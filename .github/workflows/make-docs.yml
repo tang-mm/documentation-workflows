@@ -1,0 +1,86 @@
+name: Build Certification Programme Documentation
+
+on:
+  push:
+    branches:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true  
+
+    env:
+      BASE_DIR: ${{ github.workspace }}
+      BUILDDIR_HTML: _build/html
+      BUILDDIR_PDF: _build/pdf
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check if Makefile exists
+        run: test -f Makefile || { echo "Makefile not found, exiting."; exit 1; }
+
+      - name: Add checkbox-dev/beta ppa
+        run: |
+          sudo add-apt-repository ppa:checkbox-dev/beta
+          sudo apt-get update
+
+      - name: Install apt prerequisites
+        run: |
+          sudo apt-get install --no-install-recommends --assume-yes \
+            python3-pip \
+            python3-venv \
+            python3-sphinx \
+            build-essential \
+            canonical-certification-client \
+            canonical-certification-server \
+            fonts-ubuntu
+
+      # depend on checkbox-cli to generate test guides
+      - name: Check if run_generate_test_guide.sh exists
+        run: test -f scripts/run_generate_test_guide.sh && echo "Found run_generate_test_guide.sh" || echo "run_generate_test_guide.sh not found, skipping"
+      
+      - name: Generate coverage guides
+        if: success() && steps.check-sh-exists.outputs.script-exists == 'true'
+        run: |
+          cd scripts/
+          alias checkbox-cli="checkbox.checkbox-cli"
+          bash ./run_generate_test_guide.sh
+        id: generate-guides
+
+      - name: Set up and activate Sphinx virtualenv
+        run: |
+          cd $BASE_DIR
+          make install
+
+      - name: Build PDF formatted documentation
+        run: |
+          make clean-doc
+          make pdf
+
+      - name: Upload PDF formatted artifacts
+        if: success() && steps.check-sh-exists.outputs.exists == 'true' && steps.generate-guides.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: PDFs
+          path: ${{ env.BUILDDIR_PDF }}
+          retention-days: 5
+
+      - name: Build HTML formatted documentation
+        if: success() && steps.check-sh-exists.outputs.exists == 'true' && steps.generate-guides.outcome == 'success'
+        run: |
+          make html
+
+      - name: Upload HTML formatted artifacts
+        if: success() && steps.check-sh-exists.outputs.exists == 'true' && steps.generate-guides.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: HTML
+          path: ${{ env.BUILDDIR_HTML }}
+          retention-days: 5
+
