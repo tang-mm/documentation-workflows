@@ -25,12 +25,12 @@ jobs:
           echo "test"
           echo ${{ github.event.inputs.generate-guides }} 
           echo ${{ inputs.generate-guides }} 
-          echo ${{ github.event.inputs.generate-guides == true }}
-          echo ${{ github.event.inputs.generate-guides == 'true' }}
-          echo ${{ github.event.inputs.generate-guides == false }}
-          echo ${{ github.event.inputs.generate-guides == 'false' }}
+          echo ${{ inputs.generate-guides == true }}
+          echo ${{ inputs.generate-guides == 'true' }}
+          echo ${{ inputs.generate-guides == false }}
+          echo ${{ inputs.generate-guides == 'false' }}
   generate-guides:
-    if:  ${{ github.event.inputs.generate-guides == 'true' }}
+    if:  ${{ inputs.generate-guides == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
