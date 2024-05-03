@@ -3,7 +3,16 @@ name: Build Certification Programme Documentation
 on:
   push:
     branches:
-  workflow_dispatch:
+      - main
+  workflow_call:
+    inputs:
+      working-directory:
+        description: 'Working directory to run the workflow in'
+        required: true
+      generate-guides:
+        description: 'Whether to generate coverage guides or not'
+        required: false
+        default: 'false'
 
 jobs:
   build:
@@ -14,16 +23,19 @@ jobs:
       cancel-in-progress: true  
 
     env:
-      BASE_DIR: ${{ github.workspace }}
-      BUILDDIR_HTML: _build/html
-      BUILDDIR_PDF: _build/pdf
+      BUILDDIR_HTML: ${{ inputs.working-directory }}/_build/html
+      BUILDDIR_PDF: ${{ inputs.working-directory }}/_build/pdf
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          path: ${{ inputs.working-directory }}
 
       - name: Check if Makefile exists
-        run: test -f Makefile || { echo "Makefile not found, exiting."; exit 1; }
+        run: |
+          test -f ${{ inputs.working-directory }}/Makefile \
+          || { echo "Makefile not found, exiting."; exit 1; }
 
       - name: Add checkbox-dev/beta ppa
         run: |
@@ -43,19 +55,27 @@ jobs:
 
       # depend on checkbox-cli to generate test guides
       - name: Check if run_generate_test_guide.sh exists
-        run: test -f scripts/run_generate_test_guide.sh && echo "Found run_generate_test_guide.sh" || echo "run_generate_test_guide.sh not found, skipping"
+        id: check-script-exists
+        run: |
+          if test -f  ${{ inputs.working-directory }}/scripts/run_generate_test_guide.sh; then
+            echo "::set-output name=exists::true"
+            echo "Found run_generate_test_guide.sh"
+          else
+            echo "::set-output name=exists::false"
+            echo "run_generate_test_guide.sh not found, skipping"
+          fi
       
       - name: Generate coverage guides
-        if: success() && steps.check-sh-exists.outputs.script-exists == 'true'
+        if: success() && steps.check-script-exists.outputs.exists == 'true'
         run: |
-          cd scripts/
+          cd ${{ inputs.working-directory }}/scripts/
           alias checkbox-cli="checkbox.checkbox-cli"
           bash ./run_generate_test_guide.sh
         id: generate-guides
 
       - name: Set up and activate Sphinx virtualenv
         run: |
-          cd $BASE_DIR
+          cd ${{ inputs.working-directory }}
           make install
 
       - name: Build PDF formatted documentation
@@ -64,20 +84,20 @@ jobs:
           make pdf
 
       - name: Upload PDF formatted artifacts
-        if: success() && steps.check-sh-exists.outputs.exists == 'true' && steps.generate-guides.outcome == 'success'
+        if: success() && steps.check-script-exists.outputs.exists == 'true' && steps.generate-guides.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: PDFs
-          path: ${{ env.BUILDDIR_PDF }}
+          path:  ${{ env.BUILDDIR_PDF }}
           retention-days: 5
 
       - name: Build HTML formatted documentation
-        if: success() && steps.check-sh-exists.outputs.exists == 'true' && steps.generate-guides.outcome == 'success'
+        if: success() && steps.check-script-exists.outputs.exists == 'true' && steps.generate-guides.outcome == 'success'
         run: |
           make html
 
       - name: Upload HTML formatted artifacts
-        if: success() && steps.check-sh-exists.outputs.exists == 'true' && steps.generate-guides.outcome == 'success'
+        if: success() && steps.check-script-exists.outputs.exists == 'true' && steps.generate-guides.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: HTML
