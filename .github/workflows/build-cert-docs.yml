@@ -14,6 +14,7 @@ on:
         description: 'Whether to generate coverage guides or not. Optional. Default is false.'
         required: false
         default: 'false'
+        type: string
 
 jobs:
   test:
@@ -23,6 +24,7 @@ jobs:
         run: |
           echo "test"
           echo ${{ github.event.inputs.generate-guides }} 
+          echo ${{ inputs.generate-guides }} 
           echo ${{ github.event.inputs.generate-guides == true }}
           echo ${{ github.event.inputs.generate-guides == 'true' }}
           echo ${{ github.event.inputs.generate-guides == false }}
